@@ -332,56 +332,63 @@ class Tube(commands.Cog):
                 if (published > last_video_time and not entry["yt_videoid"] in history) or (
                     demo and published > last_video_time - datetime.timedelta(seconds=1)
                 ):
-                    logmsg = f"Eligible Video Found {entry['yt_videoid']}"
-                    logmsg = logmsg + "\npublished: " + entry.get("published")
-                    logmsg = (
-                        logmsg + "\npublished_parsed: " + published.strftime("%Y-%m-%d %H:%M:%S")
-                    )
-                    logmsg = logmsg + "\nupdated: " + entry.get("published")
-                    logmsg = (
-                        logmsg
-                        + "\nupdated_parsed: "
-                        + datetime.datetime.fromtimestamp(
-                            time.mktime(entry.get("updated_parsed", TIME_TUPLE))
-                        ).strftime("%Y-%m-%d %H:%M:%S")
-                    )
-                    logmsg = logmsg + "\nConfig previous:" + subs[i].get("previous", "None")
-                    altered = True
-                    subs[i]["previous"] = entry["published"]
-                    new_history.append(entry["yt_videoid"])
-                    # Build custom description if one is set
-                    custom = sub.get("custom", False)
-                    if custom:
-                        for token in TOKENIZER.split(custom):
-                            if token.startswith("%") and token.endswith("%"):
-                                custom = custom.replace(token, entry.get(token[1:-1]))
-                        description = f"{custom}\n{entry['link']}"
-                    # Default descriptions
-                    else:
-                        if channel.permissions_for(guild.me).embed_links:
-                            # Let the embed provide necessary info
-                            description = entry["link"]
+                    if "#shorts" in entry["title"].lower():
+                        logmsg = f"Eligible Video Found {entry['yt_videoid']}"
+                        logmsg = logmsg + "\npublished: " + entry.get("published")
+                        logmsg = (
+                            logmsg
+                            + "\npublished_parsed: "
+                            + published.strftime("%Y-%m-%d %H:%M:%S")
+                        )
+                        logmsg = logmsg + "\nupdated: " + entry.get("published")
+                        logmsg = (
+                            logmsg
+                            + "\nupdated_parsed: "
+                            + datetime.datetime.fromtimestamp(
+                                time.mktime(entry.get("updated_parsed", TIME_TUPLE))
+                            ).strftime("%Y-%m-%d %H:%M:%S")
+                        )
+                        logmsg = logmsg + "\nConfig previous:" + subs[i].get("previous", "None")
+                        altered = True
+                        subs[i]["previous"] = entry["published"]
+                        new_history.append(entry["yt_videoid"])
+                        # Build custom description if one is set
+                        custom = sub.get("custom", False)
+                        if custom:
+                            for token in TOKENIZER.split(custom):
+                                if token.startswith("%") and token.endswith("%"):
+                                    custom = custom.replace(token, entry.get(token[1:-1]))
+                            description = f"{custom}\n{entry['link']}"
+                        # Default descriptions
                         else:
-                            description = (
-                                f"New video from *{entry['author'][:500]}*:"
-                                f"\n**{entry['title'][:500]}**\n{entry['link']}"
-                            )
+                            if channel.permissions_for(guild.me).embed_links:
+                                # Let the embed provide necessary info
+                                description = entry["link"]
+                            else:
+                                description = (
+                                    f"New short from *{entry['author'][:500]}*:"
+                                    f"\n**{entry['title'][:500]}**\n{entry['link']}"
+                                )
 
-                    mention_id = sub.get("mention", False)
-                    if mention_id:
-                        if mention_id == guild.id:
-                            description = f"{guild.default_role} {description}"
-                            mentions = discord.AllowedMentions(everyone=True)
+                        mention_id = sub.get("mention", False)
+                        if mention_id:
+                            if mention_id == guild.id:
+                                description = f"{guild.default_role} {description}"
+                                mentions = discord.AllowedMentions(everyone=True)
+                            else:
+                                description = f"<@&{mention_id}> {description}"
+                                mentions = discord.AllowedMentions(roles=True)
                         else:
-                            description = f"<@&{mention_id}> {description}"
-                            mentions = discord.AllowedMentions(roles=True)
-                    else:
-                        mentions = discord.AllowedMentions()
+                            mentions = discord.AllowedMentions()
 
-                    self.debug_debug(logmsg)
-                    message = await channel.send(content=description, allowed_mentions=mentions)
-                    if publish:
-                        await message.publish()
+                        self.debug_debug(logmsg)
+                        message = await channel.send(
+                            content=description, allowed_mentions=mentions
+                        )
+                        if publish:
+                            await message.publish()
+                    else:
+                        logmsg = f"Video {entry['yt_videoid']} is not a short"
         if altered:
             await self.conf.guild(guild).subscriptions.set(subs)
             await self.conf.guild(guild).cache.set(list(set([*history, *new_history])))
