@@ -343,14 +343,12 @@ class Tube(commands.Cog):
                 if (published > last_video_time and not entry["yt_videoid"] in history) or (
                     demo and published > last_video_time - datetime.timedelta(seconds=1)
                 ):
-                    shorts_config = sub.get("shorts", Shorts.ENABLED)
-                    log.debug(f"Title: {entry['title']}")
-                    self.debug_debug(f"Title: {entry['title']}")
+                    shorts_config = sub.get("shorts", Shorts.ENABLED.value)
                     if (
-                        self._is_short(entry['title'])
+                        self._is_short(entry["title"])
                         and shorts_config in [Shorts.ENABLED, Shorts.ONLY]
                     ) or (
-                        not self._is_short(entry['title'])
+                        not self._is_short(entry["title"])
                         and shorts_config in [Shorts.ENABLED, Shorts.DISABLED]
                     ):
                         logmsg = f"Eligible Video Found {entry['yt_videoid']}"
@@ -408,7 +406,7 @@ class Tube(commands.Cog):
                         if publish:
                             await message.publish()
                     else:
-                        logmsg = f"{'Short' if self._is_short(entry['title']) else 'Video'} {entry['yt_videoid']} does not match filter: is_short={self._is_short(entry['title'])}, shorts={shorts_config.value}"
+                        logmsg = f"{'Short' if self._is_short(entry['title']) else 'Video'} {entry['yt_videoid']} does not match filter: is_short={self._is_short(entry['title'])}, shorts={shorts_config}"
         if altered:
             await self.conf.guild(guild).subscriptions.set(subs)
             await self.conf.guild(guild).cache.set(list(set([*history, *new_history])))
