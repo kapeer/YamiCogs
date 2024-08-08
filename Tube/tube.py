@@ -549,5 +549,5 @@ class Tube(commands.Cog):
             debugger.info(f"[EXCEPTION]: {msg}")
             debugger.propagate = True
 
-    def _is_short(title):
+    def _is_short(self, title):
         return "#shorts" in title.lower()
