@@ -4,7 +4,7 @@ import hashlib
 import logging
 import re
 import time
-from enum import Flag, auto
+from enum import Enum
 from typing import Optional
 
 import aiohttp
@@ -31,10 +31,10 @@ TIME_TUPLE = (*(int(x) for x in re.split(r"-|T|:|\+", TIME_DEFAULT)), 0)
 TOKENIZER = re.compile(r"([^\s]+)")
 
 
-class Shorts(Flag):
-    ENABLED = auto()
-    DISABLED = auto()
-    ONLY = auto()
+class Shorts(str, Enum):
+    ENABLED = "ENABLED"
+    DISABLED = "DISABLED"
+    ONLY = "ONLY"
 
 
 class Tube(commands.Cog):
@@ -80,7 +80,7 @@ class Tube(commands.Cog):
         channelYouTube,
         channelDiscord: Optional[discord.TextChannel] = None,
         publish: Optional[bool] = False,
-        shorts: Optional[Shorts] = Shorts.ENABLED,
+        shorts: Optional[str] = Shorts.ENABLED.value,
     ):
         """Subscribe a Discord channel to a YouTube channel
 
@@ -105,7 +105,7 @@ class Tube(commands.Cog):
             "id": channelYouTube,
             "channel": {"name": channelDiscord.name, "id": channelDiscord.id},
             "publish": publish,
-            "shorts": shorts,
+            "shorts": Shorts(shorts.split("=")[-1]) if "=" in shorts else Shorts(shorts),
         }
         newSub["uid"] = self.sub_uid(newSub)
         for sub in subs:
@@ -221,7 +221,7 @@ class Tube(commands.Cog):
             channel = f'{sub["channel"]["name"][:103]} ({sub["channel"]["id"]})'  # Max 124 chars
             subs_by_channel[channel] = [
                 # Sub entry must be max 100 chars: 45 + 2 + 24 + 4 + 25 = 100
-                f"{sub.get('name', sub['id'][:45])} ({sub['id']}) - {sub.get('previous', 'Never')} (shorts: {sub.get('shorts', Shorts.ENABLED)})",
+                f"{sub.get('name', sub['id'][:45])} ({sub['id']}) - {sub.get('previous', 'Never')} (shorts: {sub.get('shorts', Shorts.ENABLED.value)})",
                 # Preserve previous entries
                 *subs_by_channel.get(channel, []),
             ]
@@ -344,11 +344,13 @@ class Tube(commands.Cog):
                     demo and published > last_video_time - datetime.timedelta(seconds=1)
                 ):
                     shorts_config = sub.get("shorts", Shorts.ENABLED)
+                    log.debug(f"Title: {entry['title']}")
+                    self.debug_debug(f"Title: {entry['title']}")
                     if (
-                        self._is_short(entry["title"])
+                        self._is_short(entry['title'])
                         and shorts_config in [Shorts.ENABLED, Shorts.ONLY]
                     ) or (
-                        not self._is_short(entry["title"])
+                        not self._is_short(entry['title'])
                         and shorts_config in [Shorts.ENABLED, Shorts.DISABLED]
                     ):
                         logmsg = f"Eligible Video Found {entry['yt_videoid']}"
@@ -406,7 +408,7 @@ class Tube(commands.Cog):
                         if publish:
                             await message.publish()
                     else:
-                        logmsg = f"{'Short' if self._is_short(entry['title']) else 'Video'} {entry['yt_videoid']} does not match filter: is_short={self._is_short(entry['title'])}, shorts={shorts_config}"
+                        logmsg = f"{'Short' if self._is_short(entry['title']) else 'Video'} {entry['yt_videoid']} does not match filter: is_short={self._is_short(entry['title'])}, shorts={shorts_config.value}"
         if altered:
             await self.conf.guild(guild).subscriptions.set(subs)
             await self.conf.guild(guild).cache.set(list(set([*history, *new_history])))
